@@ -24,10 +24,10 @@ def get_video(url: str):
             'quiet': True, 
             'skip_download': True,
             'format': 'best',
-            # YOUTUBE BYPASS TRICK: YouTube ko lagega request Android Mobile se aayi hai
+            # ADVANCED YOUTUBE BYPASS TRICK: Multiple clients fallback (iPhone, Android, Mobile Web)
             'extractor_args': {
                 'youtube': {
-                    'player_client': ['android']
+                    'player_client': ['android_creator', 'ios', 'mweb', 'web']
                 }
             }
         }
