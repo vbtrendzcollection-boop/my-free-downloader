@@ -23,7 +23,13 @@ def get_video(url: str):
         ydl_opts = {
             'quiet': True, 
             'skip_download': True,
-            'format': 'best'
+            'format': 'best',
+            # YOUTUBE BYPASS TRICK: YouTube ko lagega request Android Mobile se aayi hai
+            'extractor_args': {
+                'youtube': {
+                    'player_client': ['android']
+                }
+            }
         }
         
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
