@@ -19,15 +19,15 @@ def home():
 @app.get("/get-video")
 def get_video(url: str):
     try:
-        # Options me 'best' add kiya taki directly sabse best format mile
         ydl_opts = {
             'quiet': True, 
             'skip_download': True,
             'format': 'best',
-            # ADVANCED YOUTUBE BYPASS TRICK: Multiple clients fallback (iPhone, Android, Mobile Web)
+            # YAHAN COOKIES FILE KA NAAM ADD KIYA HAI
+            'cookiefile': 'cookies.txt',
             'extractor_args': {
                 'youtube': {
-                    'player_client': ['android_creator', 'ios', 'mweb', 'web']
+                    'player_client': ['android', 'web']
                 }
             }
         }
