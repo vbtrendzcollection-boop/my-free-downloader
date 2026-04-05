@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import yt_dlp
+import os
+import glob
 
 app = FastAPI()
 
@@ -23,14 +25,19 @@ def get_video(url: str):
             'quiet': True, 
             'skip_download': True,
             'format': 'best',
-            # YAHAN COOKIES FILE KA NAAM ADD KIYA HAI
-            'cookiefile': 'cookies.txt',
+            # YOUTUBE BYPASS: Sirf Mobile clients ka use karenge, 'web' ko hata diya taaki bot error na aaye
             'extractor_args': {
                 'youtube': {
-                    'player_client': ['android', 'web']
+                    'player_client': ['android', 'ios']
                 }
             }
         }
+        
+        # SMART COOKIE FINDER: Ye automatically kisi bhi cookie file (jaise youtube.com cookies.text) ko dhoondh lega
+        cookie_files = [f for f in os.listdir('.') if 'cookie' in f.lower() and f.lower().endswith(('.txt', '.text'))]
+        if cookie_files:
+            ydl_opts['cookiefile'] = cookie_files[0]
+            print(f"Using cookie file: {cookie_files[0]}")
         
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
