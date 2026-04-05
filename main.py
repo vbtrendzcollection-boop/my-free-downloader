@@ -1,3 +1,7 @@
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+import yt_dlp
+
 app = FastAPI()
 
 # WordPress frontend se connect hone ke liye zaroori hai
