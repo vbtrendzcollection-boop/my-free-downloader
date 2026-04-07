@@ -19,30 +19,25 @@ def home():
 
 @app.get("/get-video")
 def get_video(url: str):
-    # Tracking variable to see if cookies are found
-    cookie_file_used = "Not Found"
-    
     try:
         ydl_opts = {
             'quiet': True, 
             'skip_download': True,
-            # 'ignoreerrors' aur 'format' dono hata diye hain. 
-            # Ab yt-dlp automatically music videos aur normal videos ko bina crash hue handle karega.
+            # Yahan se saari format limitations hata di gayi hain
+            # Ab ye bina kisi format error ke saara data le aayega
         }
         
         # SMART COOKIE FINDER: Checks all files in directory for the word 'cookie'
-        cookie_files = [f for f in os.listdir('.') if 'cookie' in f.lower()]
+        cookie_files = [f for f in os.listdir('.') if 'cookie' in f.lower() and f.lower().endswith(('.txt', '.text'))]
         if cookie_files:
             ydl_opts['cookiefile'] = cookie_files[0]
-            cookie_file_used = cookie_files[0]
-            print(f"Using cookie file: {cookie_file_used}")
+            print(f"Using cookie file: {cookie_files[0]}")
         
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
 
-            # Agar info nahi milti hai (bohot rare case)
-            if info is None:
-                return {"status": "error", "message": "Video fetch nahi ho paya, kripya link check karein."}
+            if not info:
+                return {"status": "error", "message": "YouTube ne data nahi diya. Kripya video link check karein."}
 
             video_info = {
                 "title": info.get('title', 'Video Title'),
@@ -50,28 +45,38 @@ def get_video(url: str):
                 "formats": []
             }
 
-            # Saare formats check karna aur sirf wo nikalna jisme Video + Audio dono ho
+            # Step 1: Normal formats dhoondhna (Jisme Video aur Audio dono ho)
             for f in info.get('formats', []):
-                ext = f.get('ext', '')
                 vcodec = f.get('vcodec', 'none')
                 acodec = f.get('acodec', 'none')
+                ext = f.get('ext', '')
                 
-                # Sirf direct chalne wale formats (acodec aur vcodec 'none' nahi hone chahiye)
                 if f.get('url') and vcodec != 'none' and acodec != 'none':
-                    quality = f.get('format_note') or f.get('resolution') or 'Video'
+                    quality = f.get('format_note') or f.get('resolution') or 'Normal Quality'
                     video_info["formats"].append({
                         "quality": f"{quality} ({ext})",
                         "link": f.get('url')
                     })
             
-            # Agar koi combined format na mile (jaise Music Videos me hota hai), toh direct link use karein
-            if not video_info["formats"] and info.get('url'):
-                video_info["formats"].append({
-                    "quality": "Best Quality",
-                    "link": info.get('url')
-                })
+            # Step 2: Agar Normal formats na mile (Music videos ke case me)
+            if len(video_info["formats"]) == 0:
+                # Direct best available link use karein
+                if info.get('url'):
+                    video_info["formats"].append({
+                        "quality": "Best Quality (Auto)",
+                        "link": info.get('url')
+                    })
+                else:
+                    # Backup: Koi bhi mp4 video format utha lo
+                    for f in info.get('formats', []):
+                        if f.get('ext') == 'mp4' and f.get('url'):
+                            video_info["formats"].append({
+                                "quality": "Basic MP4",
+                                "link": f.get('url')
+                            })
+                            break
 
-            # Formats ko duplicate hone se bachana
+            # Duplicates hatana taaki UI saaf dikhe
             unique_formats = []
             seen_links = set()
             for f in video_info["formats"]:
@@ -84,5 +89,4 @@ def get_video(url: str):
             return {"status": "success", "data": video_info}
             
     except Exception as e:
-        error_msg = str(e)
-        return {"status": "error", "message": f"Server error (Cookie File: {cookie_file_used}): {error_msg}"}
+        return {"status": "error", "message": f"Server error: {str(e)}"}
