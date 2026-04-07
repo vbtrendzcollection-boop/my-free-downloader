@@ -2,7 +2,6 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import yt_dlp
 import os
-import glob
 
 app = FastAPI()
 
@@ -20,24 +19,23 @@ def home():
 
 @app.get("/get-video")
 def get_video(url: str):
+    # Tracking variable to see if cookies are found
+    cookie_file_used = "Not Found"
+    
     try:
         ydl_opts = {
             'quiet': True, 
             'skip_download': True,
-            'format': 'best',
-            # YOUTUBE BYPASS: Sirf Mobile clients ka use karenge, 'web' ko hata diya taaki bot error na aaye
-            'extractor_args': {
-                'youtube': {
-                    'player_client': ['android', 'ios']
-                }
-            }
+            'format': 'best'
+            # YAHAN SE MOBILE TRICK HATA DI GAYI HAI KYUNKI AB COOKIES HAIN
         }
         
-        # SMART COOKIE FINDER: Ye automatically kisi bhi cookie file (jaise youtube.com cookies.text) ko dhoondh lega
-        cookie_files = [f for f in os.listdir('.') if 'cookie' in f.lower() and f.lower().endswith(('.txt', '.text'))]
+        # SMART COOKIE FINDER: Checks all files in directory for the word 'cookie'
+        cookie_files = [f for f in os.listdir('.') if 'cookie' in f.lower()]
         if cookie_files:
             ydl_opts['cookiefile'] = cookie_files[0]
-            print(f"Using cookie file: {cookie_files[0]}")
+            cookie_file_used = cookie_files[0]
+            print(f"Using cookie file: {cookie_file_used}")
         
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
@@ -66,6 +64,6 @@ def get_video(url: str):
             return {"status": "success", "data": video_info}
             
     except Exception as e:
-        # Pura error message capture karke wapas bhejna
+        # Ab error message me ye bhi batayega ki konsi cookie file mili ya nahi mili
         error_msg = str(e)
-        return {"status": "error", "message": f"Server error detail: {error_msg}"}
+        return {"status": "error", "message": f"Server error (Cookie File: {cookie_file_used}): {error_msg}"}
