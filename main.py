@@ -23,6 +23,8 @@ def get_video(url: str):
         ydl_opts = {
             'quiet': True, 
             'skip_download': True,
+            # SUPER FALLBACK: Ye line wapas add ki gayi hai taaki format error kabhi na aaye
+            'format': 'bestvideo+bestaudio/best/worstvideo+worstaudio/worst/all',
         }
         
         # SMART COOKIE FINDER: Checks all files in directory for the word 'cookie'
