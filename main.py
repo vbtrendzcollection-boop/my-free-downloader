@@ -23,7 +23,6 @@ def get_video(url: str):
         ydl_opts = {
             'quiet': True, 
             'skip_download': True,
-            # SUPER FALLBACK: Ye line wapas add ki gayi hai taaki format error kabhi na aaye
             'format': 'bestvideo+bestaudio/best/worstvideo+worstaudio/worst/all',
         }
         
@@ -54,6 +53,7 @@ def get_video(url: str):
                 acodec = f.get('acodec')
                 url_link = f.get('url')
                 ext = f.get('ext')
+                protocol = f.get('protocol', '')
                 
                 # Height ko safely number (integer) mein badalna
                 try:
@@ -61,7 +61,8 @@ def get_video(url: str):
                 except:
                     height = 0
 
-                if not url_link:
+                # 1. Sabse Zaroori Filter: Sirf HTTPS links accept karo, m3u8 aur dash files ko reject karo (kyunki wo direct download nahi hote)
+                if not url_link or 'm3u8' in protocol or 'dash' in protocol or not url_link.startswith('http'):
                     continue
 
                 has_video = vcodec not in ['none', None]
