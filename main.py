@@ -23,9 +23,9 @@ def get_video(url: str):
         ydl_opts = {
             'quiet': True, 
             'skip_download': True,
-            # ERROR FIX: '/all' hata diya gaya hai jo system ko crash karwa raha tha.
-            # Ab ye 'best' se 'worst' tak sab try karega lekin fail nahi hoga.
-            'format': 'bestvideo+bestaudio/best/worstvideo+worstaudio/worst',
+            # ERROR FIX: 'ignore_no_formats_error' ko True kar diya hai.
+            # Ab koi format available na hone par bhi yt-dlp crash nahi hoga, balki raw formats de dega.
+            'ignore_no_formats_error': True,
         }
         
         # SMART COOKIE FINDER: Checks all files in directory for the word 'cookie'
@@ -82,7 +82,7 @@ def get_video(url: str):
 
                 # Audio Only option dhoondhna
                 if not has_video and has_audio:
-                    if not audio_format or ext == 'm4a':
+                    if not audio_format or ext in ['m4a', 'mp3']:
                         audio_format = {"quality": "Audio Only (MP3/M4A)", "link": url_link}
 
                 # Video options (Strictly heights with video and MP4/WebM)
@@ -133,12 +133,22 @@ def get_video(url: str):
             if audio_format:
                 video_info["formats"].append(audio_format)
 
-            # Ultimate Fallback: Agar saari list khali ho jaye
-            if not video_info["formats"] and info.get('url'):
-                video_info["formats"].append({
-                    "quality": "Best Quality Video (MP4)",
-                    "link": info.get('url')
-                })
+            # Ultimate Fallback: Agar filter ke baad list khali ho jaye
+            if not video_info["formats"]:
+                if info.get('url'):
+                    video_info["formats"].append({
+                        "quality": "Best Quality Video",
+                        "link": info.get('url')
+                    })
+                else:
+                    # Koi bhi safe direct link nikal kar de dein
+                    for f in info.get('formats', []):
+                        if f.get('url') and f.get('url').startswith('http') and f.get('ext') == 'mp4':
+                            video_info["formats"].append({
+                                "quality": "Standard Video (MP4)",
+                                "link": f.get('url')
+                            })
+                            break
 
             return {"status": "success", "data": video_info}
             
