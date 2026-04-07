@@ -23,8 +23,9 @@ def get_video(url: str):
         ydl_opts = {
             'quiet': True, 
             'skip_download': True,
-            # 'best' assure karta hai ki koi kachra link default na ban jaye
-            'format': 'best',
+            # ERROR FIX: '/all' hata diya gaya hai jo system ko crash karwa raha tha.
+            # Ab ye 'best' se 'worst' tak sab try karega lekin fail nahi hoga.
+            'format': 'bestvideo+bestaudio/best/worstvideo+worstaudio/worst',
         }
         
         # SMART COOKIE FINDER: Checks all files in directory for the word 'cookie'
@@ -132,7 +133,7 @@ def get_video(url: str):
             if audio_format:
                 video_info["formats"].append(audio_format)
 
-            # Ultimate Fallback: Agar saari list khali ho jaye (bot protection ki wajah se)
+            # Ultimate Fallback: Agar saari list khali ho jaye
             if not video_info["formats"] and info.get('url'):
                 video_info["formats"].append({
                     "quality": "Best Quality Video (MP4)",
