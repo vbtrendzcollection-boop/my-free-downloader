@@ -40,6 +40,10 @@ def get_video(url: str):
             if not info:
                 return {"status": "error", "message": "YouTube ne data nahi diya. Kripya video link check karein."}
 
+            # NAYA FIX: Playlist ya Channel URL ko handle karna
+            if 'entries' in info and info.get('entries'):
+                info = info['entries'][0]
+
             video_info = {
                 "title": info.get('title', 'Video Title'),
                 "thumbnail": info.get('thumbnail', ''),
@@ -163,6 +167,23 @@ def get_video(url: str):
                             })
                             if len(video_info["formats"]) >= 2: # Limit fallback results
                                 break
+
+                # 4. EXTREME FALLBACK: Agar sab kuch block ho jaye, toh koi bhi link utha lo (Crash-proof)
+                if not video_info["formats"]:
+                    for f in info.get('formats', []):
+                        if f.get('url') and 'sb' not in str(f.get('format_id', '')).lower():
+                            video_info["formats"].append({
+                                "quality": "Direct Raw Link",
+                                "link": f.get('url')
+                            })
+                            break
+                    
+                    # Agar abhi bhi empty hai toh main url de do
+                    if not video_info["formats"] and info.get('url'):
+                        video_info["formats"].append({
+                            "quality": "Direct Raw Link",
+                            "link": info.get('url')
+                        })
 
             # Final Duplicate Link Check for Fallbacks
             final_formats = []
