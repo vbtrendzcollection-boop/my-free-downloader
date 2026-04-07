@@ -23,8 +23,8 @@ def get_video(url: str):
         ydl_opts = {
             'quiet': True, 
             'skip_download': True,
-            # Yahan se saari format limitations hata di gayi hain
-            # Ab ye bina kisi format error ke saara data le aayega
+            # SUPER FALLBACK: Agar standard format na mile, toh jo bhi best/worst available ho usse select karo (taaki system crash na ho)
+            'format': 'bestvideo+bestaudio/best/worstvideo+worstaudio/worst/all',
         }
         
         # SMART COOKIE FINDER: Checks all files in directory for the word 'cookie'
@@ -47,31 +47,33 @@ def get_video(url: str):
 
             # Step 1: Normal formats dhoondhna (Jisme Video aur Audio dono ho)
             for f in info.get('formats', []):
-                vcodec = f.get('vcodec', 'none')
-                acodec = f.get('acodec', 'none')
+                vcodec = f.get('vcodec')
+                acodec = f.get('acodec')
                 ext = f.get('ext', '')
                 
-                if f.get('url') and vcodec != 'none' and acodec != 'none':
+                # Check for formats having both audio and video streams
+                if f.get('url') and vcodec not in ['none', None] and acodec not in ['none', None]:
                     quality = f.get('format_note') or f.get('resolution') or 'Normal Quality'
                     video_info["formats"].append({
                         "quality": f"{quality} ({ext})",
                         "link": f.get('url')
                     })
             
-            # Step 2: Agar Normal formats na mile (Music videos ke case me)
+            # Step 2: Agar combined formats bilkul na mile
             if len(video_info["formats"]) == 0:
-                # Direct best available link use karein
+                # Direct best available link fallback
                 if info.get('url'):
                     video_info["formats"].append({
                         "quality": "Best Quality (Auto)",
                         "link": info.get('url')
                     })
                 else:
-                    # Backup: Koi bhi mp4 video format utha lo
+                    # Backup: Grab whatever format has a valid URL
                     for f in info.get('formats', []):
-                        if f.get('ext') == 'mp4' and f.get('url'):
+                        if f.get('url') and f.get('vcodec') not in ['none', None]:
+                            quality = f.get('format_note') or f.get('resolution') or 'Video'
                             video_info["formats"].append({
-                                "quality": "Basic MP4",
+                                "quality": f"Basic Video ({f.get('ext', 'mp4')})",
                                 "link": f.get('url')
                             })
                             break
