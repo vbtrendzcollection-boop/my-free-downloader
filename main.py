@@ -23,7 +23,7 @@ def get_video(url: str):
         ydl_opts = {
             'quiet': True, 
             'skip_download': True,
-            'format': 'bestvideo+bestaudio/best/worstvideo+worstaudio/worst/all',
+            'format': 'bestvideo+bestaudio/best/all', # Sab kuch nikalo taaki hum filter kar sakein
         }
         
         # SMART COOKIE FINDER: Checks all files in directory for the word 'cookie'
@@ -47,13 +47,14 @@ def get_video(url: str):
             audio_format = None
             video_formats = {}
 
-            # Step 1: Saare formats ko filter karna
+            # Step 1: Saare formats ko STRICTLY filter karna
             for f in info.get('formats', []):
                 vcodec = f.get('vcodec')
                 acodec = f.get('acodec')
                 url_link = f.get('url')
                 ext = f.get('ext')
                 protocol = f.get('protocol', '')
+                format_id = f.get('format_id', '')
                 
                 # Height ko safely number (integer) mein badalna
                 try:
@@ -61,8 +62,12 @@ def get_video(url: str):
                 except:
                     height = 0
 
-                # 1. Sabse Zaroori Filter: Sirf HTTPS links accept karo, m3u8 aur dash files ko reject karo (kyunki wo direct download nahi hote)
-                if not url_link or 'm3u8' in protocol or 'dash' in protocol or not url_link.startswith('http'):
+                # 🚨 STRICT FILTER: Images, storyboards (sb), dash, aur m3u8 files ko reject karo
+                if not url_link or not url_link.startswith('http'):
+                    continue
+                if 'sb' in format_id or ext in ['mhtml', 'webp', 'jpg', 'png', 'gif']:
+                    continue
+                if 'm3u8' in protocol or 'dash' in protocol:
                     continue
 
                 has_video = vcodec not in ['none', None]
@@ -73,8 +78,9 @@ def get_video(url: str):
                     if not audio_format or ext == 'm4a':
                         audio_format = {"quality": "Audio Only (MP3)", "link": url_link}
 
-                # Video options (1080, 720, 480, 360) dhoondhna
-                if has_video and height in [1080, 720, 480, 360]:
+                # Video options dhoondhna (Sirf valid video formats like MP4/WebM)
+                if has_video and height > 0 and ext in ['mp4', 'webm']:
+                    # Agar height exactly 1080 na ho kar 1078 bhi ho, toh use store kar lenge
                     if height not in video_formats:
                         video_formats[height] = f
                     else:
@@ -86,30 +92,54 @@ def get_video(url: str):
                         elif ext == 'mp4' and video_formats[height].get('ext') != 'mp4' and current_has_audio == has_audio:
                             video_formats[height] = f
 
-            # Step 2: Formats ko list mein jodna (High to Low quality)
+            # Step 2: Formats ko list mein jodna (High to Low quality sorting)
             for res in sorted(video_formats.keys(), reverse=True):
                 f = video_formats[res]
                 has_audio = f.get('acodec') not in ['none', None]
                 
-                # YouTube 1080p mein aawaz alag rakhta hai, isliye warning zaroori hai
+                # YouTube high quality (1080p+) mein aawaz alag rakhta hai
                 audio_tag = "" if has_audio else " (Mute/No Audio)"
-                quality_name = f"{res}p HD" if res >= 720 else f"{res}p"
+                
+                # Dynamic naming (1080p, 720p, etc. bajaye exact height ke)
+                if res >= 1080: quality_name = "1080p HD"
+                elif res >= 720: quality_name = "720p HD"
+                elif res >= 480: quality_name = "480p"
+                elif res >= 360: quality_name = "360p"
+                else: quality_name = f"{res}p"
                 
                 video_info["formats"].append({
                     "quality": quality_name + audio_tag,
                     "link": f.get('url')
                 })
 
+            # Duplicate qualities ko ek saath merge kar dena taki 1080p do baar na dikhe
+            unique_formats = []
+            seen_qualities = set()
+            for format_obj in video_info["formats"]:
+                if format_obj["quality"] not in seen_qualities:
+                    unique_formats.append(format_obj)
+                    seen_qualities.add(format_obj["quality"])
+            
+            video_info["formats"] = unique_formats
+
             # Audio format ko sabse aakhir mein add karna
             if audio_format:
                 video_info["formats"].append(audio_format)
 
-            # Fallback agar kuch na mile
-            if not video_info["formats"] and info.get('url'):
-                video_info["formats"].append({
-                    "quality": "Best Quality",
-                    "link": info.get('url')
-                })
+            # Fallback agar Filter hone ke baad list khali ho jaye
+            if not video_info["formats"]:
+                # Default jo sabse best original video link ho, wo de do
+                if info.get('url'):
+                    video_info["formats"].append({
+                        "quality": "Best Quality Video",
+                        "link": info.get('url')
+                    })
+                else:
+                    # Akhiri koshish, koi bhi valid video nikal lo
+                    for f in info.get('formats', []):
+                        if f.get('url') and f.get('vcodec') not in ['none', None] and f.get('ext') == 'mp4' and f.get('url').startswith('http'):
+                            video_info["formats"].append({"quality": "Best Available MP4", "link": f.get('url')})
+                            break
 
             return {"status": "success", "data": video_info}
             
