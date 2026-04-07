@@ -26,7 +26,8 @@ def get_video(url: str):
         ydl_opts = {
             'quiet': True, 
             'skip_download': True,
-            # 'format': 'best' yahan se hata diya gaya hai taaki format error na aaye
+            'ignoreerrors': True, # Ye kisi bhi format selection error ko bypass karega
+            'format': 'b/best/bestvideo+bestaudio', # Safe format fallback
         }
         
         # SMART COOKIE FINDER: Checks all files in directory for the word 'cookie'
@@ -38,6 +39,10 @@ def get_video(url: str):
         
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
+
+            # Agar video restricted hui aur info nahi mila
+            if info is None:
+                return {"status": "error", "message": "Video details fetch nahi ho paye (Shayad private/restricted hai)."}
 
             video_info = {
                 "title": info.get('title', 'Video Title'),
@@ -79,6 +84,5 @@ def get_video(url: str):
             return {"status": "success", "data": video_info}
             
     except Exception as e:
-        # Ab error message me ye bhi batayega ki konsi cookie file mili ya nahi mili
         error_msg = str(e)
         return {"status": "error", "message": f"Server error (Cookie File: {cookie_file_used}): {error_msg}"}
