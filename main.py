@@ -133,22 +133,46 @@ def get_video(url: str):
             if audio_format:
                 video_info["formats"].append(audio_format)
 
-            # Ultimate Fallback: Agar filter ke baad list khali ho jaye
+            # 🚀 SUPER ULTIMATE FALLBACK: Agar filter ke baad list khali ho jaye 
             if not video_info["formats"]:
-                if info.get('url'):
+                # 1. Check 'requested_formats' (YouTube generally gives combined best streams here)
+                for rf in info.get('requested_formats', []):
+                    if rf.get('url') and rf.get('url').startswith('http'):
+                        note = rf.get('format_note') or rf.get('resolution') or 'Auto'
+                        video_info["formats"].append({
+                            "quality": f"{note} (Combined)",
+                            "link": rf.get('url')
+                        })
+
+                # 2. Agar abhi bhi list khali hai, seedha direct URL use karein
+                if not video_info["formats"] and info.get('url'):
                     video_info["formats"].append({
                         "quality": "Best Quality Video",
                         "link": info.get('url')
                     })
-                else:
-                    # Koi bhi safe direct link nikal kar de dein
+                
+                # 3. Akhiri koshish: Koi bhi safe HTTP link jo image nahi hai
+                if not video_info["formats"]:
                     for f in info.get('formats', []):
-                        if f.get('url') and f.get('url').startswith('http') and f.get('ext') == 'mp4':
+                        ext = f.get('ext', '')
+                        fid = str(f.get('format_id', '')).lower()
+                        if f.get('url') and f.get('url').startswith('http') and ext not in ['mhtml', 'webp', 'jpg', 'png', 'gif'] and 'sb' not in fid:
                             video_info["formats"].append({
-                                "quality": "Standard Video (MP4)",
+                                "quality": f"Available Quality ({ext})",
                                 "link": f.get('url')
                             })
-                            break
+                            if len(video_info["formats"]) >= 2: # Limit fallback results
+                                break
+
+            # Final Duplicate Link Check for Fallbacks
+            final_formats = []
+            seen_links = set()
+            for f in video_info["formats"]:
+                if f["link"] not in seen_links:
+                    final_formats.append(f)
+                    seen_links.add(f["link"])
+            
+            video_info["formats"] = final_formats
 
             return {"status": "success", "data": video_info}
             
