@@ -26,8 +26,8 @@ def get_video(url: str):
         ydl_opts = {
             'quiet': True, 
             'skip_download': True,
-            'ignoreerrors': True, # Ye kisi bhi format selection error ko bypass karega
-            'format': 'b/best/bestvideo+bestaudio', # Safe format fallback
+            # 'ignoreerrors' aur 'format' dono hata diye hain. 
+            # Ab yt-dlp automatically music videos aur normal videos ko bina crash hue handle karega.
         }
         
         # SMART COOKIE FINDER: Checks all files in directory for the word 'cookie'
@@ -40,9 +40,9 @@ def get_video(url: str):
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
 
-            # Agar video restricted hui aur info nahi mila
+            # Agar info nahi milti hai (bohot rare case)
             if info is None:
-                return {"status": "error", "message": "Video details fetch nahi ho paye (Shayad private/restricted hai)."}
+                return {"status": "error", "message": "Video fetch nahi ho paya, kripya link check karein."}
 
             video_info = {
                 "title": info.get('title', 'Video Title'),
@@ -64,14 +64,14 @@ def get_video(url: str):
                         "link": f.get('url')
                     })
             
-            # Agar koi specific combined format na mile, toh default video link bhej do
+            # Agar koi combined format na mile (jaise Music Videos me hota hai), toh direct link use karein
             if not video_info["formats"] and info.get('url'):
                 video_info["formats"].append({
                     "quality": "Best Quality",
                     "link": info.get('url')
                 })
 
-            # Formats ko duplicate hone se bachana (optional clean-up)
+            # Formats ko duplicate hone se bachana
             unique_formats = []
             seen_links = set()
             for f in video_info["formats"]:
