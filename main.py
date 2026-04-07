@@ -26,8 +26,7 @@ def get_video(url: str):
         ydl_opts = {
             'quiet': True, 
             'skip_download': True,
-            'format': 'best'
-            # YAHAN SE MOBILE TRICK HATA DI GAYI HAI KYUNKI AB COOKIES HAIN
+            # 'format': 'best' yahan se hata diya gaya hai taaki format error na aaye
         }
         
         # SMART COOKIE FINDER: Checks all files in directory for the word 'cookie'
@@ -46,20 +45,36 @@ def get_video(url: str):
                 "formats": []
             }
 
-            # Sabse best combined format nikalna
-            if info.get('url'):
-                video_info["formats"].append({
-                    "quality": info.get('format_note', 'Best Quality'),
-                    "link": info.get('url')
-                })
-            
-            # Baki formats ki list
+            # Saare formats check karna aur sirf wo nikalna jisme Video + Audio dono ho
             for f in info.get('formats', []):
-                if f.get('ext') == 'mp4' and f.get('vcodec') != 'none':
+                ext = f.get('ext', '')
+                vcodec = f.get('vcodec', 'none')
+                acodec = f.get('acodec', 'none')
+                
+                # Sirf direct chalne wale formats (acodec aur vcodec 'none' nahi hone chahiye)
+                if f.get('url') and vcodec != 'none' and acodec != 'none':
+                    quality = f.get('format_note') or f.get('resolution') or 'Video'
                     video_info["formats"].append({
-                        "quality": f.get('format_note', 'MP4'),
+                        "quality": f"{quality} ({ext})",
                         "link": f.get('url')
                     })
+            
+            # Agar koi specific combined format na mile, toh default video link bhej do
+            if not video_info["formats"] and info.get('url'):
+                video_info["formats"].append({
+                    "quality": "Best Quality",
+                    "link": info.get('url')
+                })
+
+            # Formats ko duplicate hone se bachana (optional clean-up)
+            unique_formats = []
+            seen_links = set()
+            for f in video_info["formats"]:
+                if f["link"] not in seen_links:
+                    unique_formats.append(f)
+                    seen_links.add(f["link"])
+            
+            video_info["formats"] = unique_formats
 
             return {"status": "success", "data": video_info}
             
